@@ -30,6 +30,26 @@ import { cn } from "@/lib/utils";
 
 // ── Feed pane (right slide-out) ──────────────────────────────────────────────
 
+const chatSessionStoragePrefix = "sympozium.ui-chat.session.";
+
+function getOrCreateChatSessionKey(
+  agentRef: string,
+  previousSessionKey?: string,
+): string {
+  const storageKey = `${chatSessionStoragePrefix}${agentRef}`;
+  const stored = window.localStorage.getItem(storageKey);
+  if (stored) return stored;
+
+  const sessionKey =
+    previousSessionKey ||
+    `ui-${agentRef}-${
+      globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }`;
+  window.localStorage.setItem(storageKey, sessionKey);
+  return sessionKey;
+}
+
 export function FeedPane({
   open,
   onToggle,
@@ -212,9 +232,11 @@ export function FeedPane({
   function handleSend() {
     const task = message.trim();
     if (!task || !activeTab) return;
+    const previousSessionKey = instanceRuns.at(-1)?.spec.sessionKey;
     createRun.mutate({
       agentRef: activeTab,
       task,
+      sessionKey: getOrCreateChatSessionKey(activeTab, previousSessionKey),
     });
     setMessage("");
   }

@@ -1191,6 +1191,7 @@ export const api = {
     create: (data: {
       agentRef: string;
       task: string;
+      sessionKey?: string;
       model?: string;
       timeout?: string;
       backend?: string;

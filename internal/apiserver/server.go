@@ -989,6 +989,22 @@ func (s *Server) createRun(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	systemPrompt := ""
+	if inst.Spec.Memory != nil {
+		systemPrompt = strings.TrimSpace(inst.Spec.Memory.SystemPrompt)
+	}
+	conversationContext, err := s.conversationHistory(r.Context(), ns, req.AgentRef, req.SessionKey)
+	if err != nil {
+		http.Error(w, "failed to load conversation history: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if conversationContext != "" {
+		if systemPrompt != "" {
+			systemPrompt += "\n\n"
+		}
+		systemPrompt += conversationContext
+	}
+
 	run := &sympoziumv1alpha1.AgentRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: req.AgentRef + "-",
@@ -998,11 +1014,12 @@ func (s *Server) createRun(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		Spec: sympoziumv1alpha1.AgentRunSpec{
-			AgentRef:   req.AgentRef,
-			AgentID:    req.AgentID,
-			SessionKey: req.SessionKey,
-			Task:       sympoziumv1alpha1.NewStringTask(req.Task),
-			Backend:    req.Backend,
+			AgentRef:     req.AgentRef,
+			AgentID:      req.AgentID,
+			SessionKey:   req.SessionKey,
+			Task:         sympoziumv1alpha1.NewStringTask(req.Task),
+			SystemPrompt: systemPrompt,
+			Backend:      req.Backend,
 			Model: sympoziumv1alpha1.ModelSpec{
 				Provider:                 provider,
 				Model:                    model,
